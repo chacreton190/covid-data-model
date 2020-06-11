@@ -137,7 +137,7 @@ class ModelFitter:
         self.cases_to_deaths_err_factor = cases_to_deaths_err_factor
         self.hospital_to_deaths_err_factor = hospital_to_deaths_err_factor
         self.percent_error_on_max_observation = percent_error_on_max_observation
-        self.t0_guess = 60
+
         self.with_age_structure = with_age_structure
 
         if len(fips) == 2:  # State FIPS are 2 digits
@@ -150,6 +150,9 @@ class ModelFitter:
                 self.observed_new_cases,
                 self.observed_new_deaths,
             ) = load_data.load_new_case_data_by_state(self.state, self.ref_date)
+            # log.info('NATASHA HERE is the time series for cases')
+            # log.info(self.times)
+            # log.info(self.observed_new_cases)
 
             (
                 self.hospital_times,
@@ -178,7 +181,6 @@ class ModelFitter:
                 self.hospitalizations,
                 self.hospitalization_data_type,
             ) = load_data.load_hospitalization_data(self.fips, t0=self.ref_date)
-
         self.cases_stdev, self.hosp_stdev, self.deaths_stdev = self.calculate_observation_errors()
         self.set_inference_parameters()
 
@@ -190,7 +192,10 @@ class ModelFitter:
             "t_delta_phases",
             "log10_I_initial",
         ]
-
+        self.t0_guess = 60
+        # log.info('first entry')
+        # log.info(self.times[0])
+        # self.t0_guess = self.times[0] + 15
         self.SEIR_kwargs = self.get_average_seir_parameters()
         self.fit_results = None
         self.mle_model = None
@@ -227,13 +232,16 @@ class ModelFitter:
             t0_guess = list(self.times)[idx_enough_cases]
 
             state_fit_result = load_inference_result(fips=self.state_obj.fips)
-            self.fit_params["t0"] = t0_guess
+            self.fit_params["t0"] = t0_guess + 15
+            log.info("N: t0 guess")
+            log.info(t0_guess)
 
             total_cases = np.sum(self.observed_new_cases)
             self.fit_params["log10_I_initial"] = np.log10(
                 initial_cases_guess / self.fit_params["test_fraction"]
             )
-            self.fit_params["limit_t0"] = state_fit_result["t0"] - 20, state_fit_result["t0"] + 30
+            # self.fit_params["limit_t0"] = state_fit_result["t0"] - 20, state_fit_result["t0"] + 30
+            self.fit_params["limit_t0"] = t0_guess, state_fit_result["t0"] + 30
             self.fit_params["t_break"] = state_fit_result["t_break"] - (
                 t0_guess - state_fit_result["t0"]
             )
